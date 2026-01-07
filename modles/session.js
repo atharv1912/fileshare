@@ -1,3 +1,4 @@
+import AppError from "../managers/AppError.js";
 class Session {
   constructor(id) {
     this.id = id;                     // unique session id
@@ -18,11 +19,12 @@ class Session {
       throw new AppError("session is full", 403);
 
     }
+    
     this.participants.add(id);
     this.touch()
    
   }
-  remeovepeer(id){
+  removepeer(id){
     this.participants.delete(id);
     if(this.participants.size==0){
 
@@ -31,11 +33,10 @@ class Session {
   }
   end(){
     this.isActive= false;
+    this.touch();
   }
   isfull(){
-    if(this.participants.size >=2){
-        return false;
-    }
+    return (this.participants.size >=2)
 
 
   }
