@@ -20,7 +20,7 @@ router.post("/create-session", async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Created successfully",
-      session,
+      sessionId,
       userId
     });
   } catch (error) {

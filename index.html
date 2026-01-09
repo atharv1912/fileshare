@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File Share</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+      background: #fafafa;
+      color: #1a1a1a;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+      padding: 48px 40px;
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 32px;
+      color: #1a1a1a;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e8e8e8;
+      margin: 32px 0;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    input[type="text"],
+    input[readonly] {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fafafa;
+      color: #1a1a1a;
+      font-family: inherit;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #1a1a1a;
+      background: #ffffff;
+    }
+
+    input[readonly] {
+      color: #666;
+      cursor: default;
+      user-select: all;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-input-wrapper {
+      width: 100%;
+      padding: 20px;
+      border: 2px dashed #d0d0d0;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: #fafafa;
+      margin-bottom: 16px;
+    }
+
+    .file-input-wrapper:hover {
+      border-color: #1a1a1a;
+      background: #f5f5f5;
+    }
+
+    .file-input-wrapper.has-file {
+      border-color: #1a1a1a;
+      background: #f5f5f5;
+    }
+
+    .file-input-label {
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .file-name {
+      font-size: 13px;
+      color: #1a1a1a;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px 20px;
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      letter-spacing: -0.01em;
+      outline: none;
+    }
+
+    button:hover {
+      background: #2d2d2d;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: #ffffff;
+      color: #1a1a1a;
+      border: 1px solid #e0e0e0;
+    }
+
+    button.secondary:hover {
+      background: #fafafa;
+      border-color: #1a1a1a;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .session-info {
+      background: #f8f8f8;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .session-info label {
+      margin-bottom: 6px;
+    }
+
+    .session-info input {
+      background: #ffffff;
+      font-size: 14px;
+      font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+      padding: 10px 12px;
+    }
+
+    .session-input-wrapper {
+      position: relative;
+    }
+
+    .copy-button {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 6px 12px;
+      font-size: 12px;
+      background: #1a1a1a;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-weight: 500;
+      width: auto;
+    }
+
+    .copy-button:hover {
+      background: #2d2d2d;
+      transform: translateY(-50%) translateY(-1px);
+    }
+
+    .copy-button:active {
+      transform: translateY(-50%);
+    }
+
+    .copy-button.copied {
+      background: #16a34a;
+    }
+
+    .session-hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .progress-section {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .progress-section.active {
+      display: block;
+    }
+
+    .progress-label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .progress-filename {
+      font-weight: 500;
+      color: #1a1a1a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 70%;
+    }
+
+    .progress-percentage {
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: #e8e8e8;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #1a1a1a;
+      border-radius: 4px;
+      transition: width 0.2s ease;
+      width: 0%;
+    }
+
+    .progress-bar.complete {
+      background: #16a34a;
+    }
+
+    .status-section {
+      margin-top: 32px;
+    }
+
+    .status-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    #log {
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 16px;
+      height: 140px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #666;
+      font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    }
+
+    #log::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #log::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #log::-webkit-scrollbar-thumb {
+      background: #d0d0d0;
+      border-radius: 3px;
+    }
+
+    #log::-webkit-scrollbar-thumb:hover {
+      background: #b0b0b0;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 32px 24px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HOME -->
+  <div id="home" class="container fade-in">
+    <h2>File Share</h2>
+
+    <button onclick="createRoom()">Create Room</button>
+
+    <div class="divider"></div>
+
+    <div class="input-group">
+      <label for="joinInput">Session ID</label>
+      <input type="text" id="joinInput" placeholder="Enter session ID" />
+    </div>
+    <button onclick="joinRoom()" class="secondary">Join Room</button>
+  </div>
+
+  <!-- ROOM -->
+  <div id="room" class="container fade-in" style="display:none">
+    <h2>Room</h2>
+
+    <div class="session-info">
+      <label>Session ID</label>
+      <div class="session-input-wrapper">
+        <input type="text" id="sessionDisplay" readonly />
+        <button class="copy-button" onclick="copySessionId(event)">Copy</button>
+      </div>
+      <div class="session-hint">Share this ID with your friend</div>
+    </div>
+
+    <div class="file-input-wrapper" onclick="document.getElementById('fileInput').click()">
+      <div class="file-input-label" id="fileInputLabel">Choose file to send</div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+    <input type="file" id="fileInput" onchange="updateFileName()" />
+    <button onclick="sendFile()">Send File</button>
+
+    <div class="progress-section" id="progressSection">
+      <div class="progress-label">
+        <span class="progress-filename" id="progressFilename"></span>
+        <span class="progress-percentage" id="progressPercentage">0%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+
+    <div class="status-section">
+      <h3>Status</h3>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
+<script>
+const API = "http://localhost:3000/api";
+
+let socket;
+let sessionId;
+let userId;
+
+let incomingMeta = null;
+let receivedChunks = [];
+let receivedBytes = 0;
+
+/* ---------- NAVIGATION ---------- */
+
+function showRoom() {
+  document.getElementById("home").style.display = "none";
+  document.getElementById("room").style.display = "block";
+  document.getElementById("sessionDisplay").value = sessionId;
+}
+
+/* ---------- UI HELPERS ---------- */
+
+function copySessionId(event) {
+  event.stopPropagation();
+  const sessionInput = document.getElementById("sessionDisplay");
+  const copyButton = event.target;
+  
+  navigator.clipboard.writeText(sessionInput.value).then(() => {
+    copyButton.textContent = "Copied!";
+    copyButton.classList.add("copied");
+    
+    setTimeout(() => {
+      copyButton.textContent = "Copy";
+      copyButton.classList.remove("copied");
+    }, 2000);
+  });
+}
+
+function updateFileName() {
+  const fileInput = document.getElementById("fileInput");
+  const wrapper = document.querySelector(".file-input-wrapper");
+  const label = document.getElementById("fileInputLabel");
+  const fileName = document.getElementById("fileName");
+  
+  if (fileInput.files[0]) {
+    wrapper.classList.add("has-file");
+    label.textContent = "Selected file:";
+    fileName.textContent = fileInput.files[0].name;
+  } else {
+    wrapper.classList.remove("has-file");
+    label.textContent = "Choose file to send";
+    fileName.textContent = "";
+  }
+}
+
+function updateProgress(percent, filename, isReceiving = false) {
+  const progressSection = document.getElementById("progressSection");
+  const progressBar = document.getElementById("progressBar");
+  const progressPercentage = document.getElementById("progressPercentage");
+  const progressFilename = document.getElementById("progressFilename");
+  
+  progressSection.classList.add("active");
+  progressFilename.textContent = (isReceiving ? "⬇️ " : "⬆️ ") + filename;
+  progressPercentage.textContent = percent + "%";
+  progressBar.style.width = percent + "%";
+  
+  if (percent >= 100) {
+    progressBar.classList.add("complete");
+    setTimeout(() => {
+      progressSection.classList.remove("active");
+      progressBar.style.width = "0%";
+      progressBar.classList.remove("complete");
+    }, 2000);
+  }
+}
+
+/* ---------- REST ---------- */
+
+async function createRoom() {
+  const res = await fetch(`${API}/create-session`, { method: "POST" });
+  const data = await res.json();
+
+  console.log("CREATE RESPONSE:", data);
+
+  sessionId = data.sessionId;
+  userId = data.userId;
+
+  if (!sessionId || !userId) {
+    alert("Failed to create session");
+    return;
+  }
+
+  connectAndJoin();
+}
+
+async function joinRoom() {
+  const input = document.getElementById("joinInput").value;
+  if (!input) {
+    alert("Enter session ID");
+    return;
+  }
+
+  const res = await fetch(`${API}/join-session/${input}`, { method: "POST" });
+  const data = await res.json();
+
+  console.log("JOIN RESPONSE:", data);
+
+  sessionId = input;
+  userId = data.userId;
+
+  if (!sessionId || !userId) {
+    alert("Failed to join session");
+    return;
+  }
+
+  connectAndJoin();
+}
+
+
+/* ---------- SOCKET ---------- */
+
+function connectAndJoin() {
+  socket = io("http://localhost:3000");
+
+  socket.on("connect", () => {
+    log("🔌 Socket connected");
+    socket.emit("join-room", { sessionId, userId });
+    showRoom();
+  });
+
+  socket.on("peer-joined", () => log("👤 Peer joined"));
+  socket.on("peer-left", () => {
+  if (transferActive) {
+    transferActive = false;
+    awaitingAck = false;
+    log("❌ Transfer stopped: receiver disconnected");
+  } else {
+    receivedChunks=[];
+    log("❌ Peer left");
+  }
+  });
+
+
+  socket.on("file-meta", (meta) => {
+    incomingMeta = meta;
+    receivedChunks = [];
+    receivedBytes = 0;
+    log("📦 Receiving " + meta.name);
+  });
+
+  socket.on("chunk-ack", ({ index }) => {
+  if (!transferActive) return;
+  if (index !== currentChunkIndex) return; // safety
+
+  awaitingAck = false;
+  currentChunkIndex++;
+  offset += chunkSize;
+
+  // Update progress for sending
+  const percent = Math.min(100, Math.floor((offset / fileToSend.size) * 100));
+  updateProgress(percent, fileToSend.name, false);
+
+  sendNextChunk();
+});
+
+
+  socket.on("file-chunk", ({ index, chunk }) => {
+  receivedChunks[index] = chunk;
+  receivedBytes += chunk.byteLength;
+
+  const percent = Math.floor(
+    (receivedBytes / incomingMeta.size) * 100
+  );
+
+  // Update progress for receiving
+  updateProgress(percent, incomingMeta.name, true);
+
+  // 🔑 ACK THIS CHUNK
+  socket.emit("chunk-ack", { index });
+});
+
+
+  socket.on("file-end", () => {
+  const blob = new Blob(receivedChunks, { type: incomingMeta.type });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = incomingMeta.name;
+  a.click();
+
+  URL.revokeObjectURL(url);
+  log("✅ File received");
+
+  socket.emit("file-received");
+});
+
+  
+  
+
+ socket.on("file-received", () => {
+  transferActive = false;
+  log("✅ File successfully received by peer");
+});
+
+
+
+}
+
+/* ---------- FILE SEND ---------- */
+let fileToSend;
+let chunkSize = 64 * 1024;
+let offset = 0;
+let currentChunkIndex = 0;
+let awaitingAck = false;
+let transferActive = false;
+async function sendNextChunk() {
+  if (!transferActive || awaitingAck) return;
+
+  if (offset >= fileToSend.size) {
+    socket.emit("file-end");
+    log("⏳ Waiting for receiver confirmation...");
+    return;
+  }
+
+  const chunk = await fileToSend
+    .slice(offset, offset + chunkSize)
+    .arrayBuffer();
+
+  socket.emit("file-chunk", {
+    index: currentChunkIndex,
+    chunk,
+  });
+
+  awaitingAck = true;
+}
+
+async function sendFile() {
+  fileToSend = document.getElementById("fileInput").files[0];
+  if (!fileToSend) return;
+
+  offset = 0;
+  currentChunkIndex = 0;
+  awaitingAck = false;
+  transferActive = true;
+
+  socket.emit("file-meta", {
+    name: fileToSend.name,
+    size: fileToSend.size,
+    type: fileToSend.type,
+  });
+
+  sendNextChunk();
+}
+
+/* ---------- LOG ---------- */
+
+function log(msg) {
+  const el = document.getElementById("log");
+  el.textContent += msg + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+
+</body>
+</html>
