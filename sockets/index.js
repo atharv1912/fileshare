@@ -5,8 +5,12 @@ const socketSessionMap = new Map();
 
 export default function setupSocket(server) {
   const io = new Server(server, {
-    cors: { origin: "*" },
-  });
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
 
   io.on("connection", (socket) => {
     console.log("Socket connected:", socket.id);
